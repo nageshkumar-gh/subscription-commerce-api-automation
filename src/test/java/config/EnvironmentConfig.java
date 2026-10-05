@@ -53,6 +53,10 @@ public final class EnvironmentConfig {
         return value.trim();
     }
 
+    public static String environment() {
+        return ENV;
+    }
+
     public static String baseUrl() {
         return get("base.url");
     }
