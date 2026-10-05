@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Logging for the test run. Console shows INFO and above; the file keeps DEBUG too.
+     Change a level for one run with e.g. -Dlog.level=DEBUG -->
+<configuration>
+
+    <property name="PATTERN" value="%d{HH:mm:ss.SSS} %-5level [%thread] %logger{1} - %msg%n"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>${log.level:-INFO}</level>
+        </filter>
+        <encoder>
+            <pattern>${PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <!-- A fresh log file per run, in target/ so it is never committed -->
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>target/logs/test-run.log</file>
+        <append>false</append>
+        <encoder>
+            <pattern>${PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Framework code -->
+    <logger name="config" level="DEBUG"/>
+    <logger name="core" level="DEBUG"/>
+    <logger name="utilities" level="DEBUG"/>
+    <logger name="tests" level="DEBUG"/>
+
+    <!-- Libraries are noisy at DEBUG; only show their warnings -->
+    <root level="WARN">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
+</configuration>

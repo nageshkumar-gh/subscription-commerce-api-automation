@@ -1,5 +1,8 @@
 package config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -9,6 +12,7 @@ import java.util.Properties;
 //Secrets (passwords) live in config/<env>-secrets.properties, which is gitignored and optional
 public final class EnvironmentConfig {
 
+    private static final Logger LOG = LoggerFactory.getLogger(EnvironmentConfig.class);
     private static final String ENV = System.getProperty("env", "local");
     private static final Properties PROPERTIES = load();
 
@@ -21,7 +25,9 @@ public final class EnvironmentConfig {
             throw new IllegalStateException("Config file not found on classpath: config/" + ENV + ".properties");
         }
         //Values in the secrets file override the shared file
-        loadInto(properties, "config/" + ENV + "-secrets.properties");
+        boolean secrets = loadInto(properties, "config/" + ENV + "-secrets.properties");
+        //Never log values here: some are secrets
+        LOG.info("Environment '{}' loaded ({} keys, secrets file {})", ENV, properties.size(), secrets ? "found" : "not found");
         return properties;
     }
 

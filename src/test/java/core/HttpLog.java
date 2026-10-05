@@ -4,6 +4,8 @@ import config.EnvironmentConfig;
 import io.restassured.filter.Filter;
 import io.restassured.filter.log.RequestLoggingFilter;
 import io.restassured.filter.log.ResponseLoggingFilter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
@@ -12,10 +14,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 //Request/response logging, controlled by http.log in the properties file (or -Dhttp.log=...):
-//  failures (default) - collect each test's HTTP traffic and print it only if the test fails
-//  all                - print every request and response as it happens
+//  failures (default) - collect each test's HTTP traffic and log it only if the test fails
+//  all                - log every request and response as it happens (one log entry per call)
 //  none               - no HTTP logging
 public final class HttpLog {
+
+    private static final Logger LOG = LoggerFactory.getLogger(HttpLog.class);
 
     //One buffer per thread, so parallel tests never mix their logs
     private static final ThreadLocal<ByteArrayOutputStream> BUFFER = ThreadLocal.withInitial(ByteArrayOutputStream::new);
@@ -31,12 +35,21 @@ public final class HttpLog {
         }
     }, true, StandardCharsets.UTF_8);
 
+    //Runs first and wraps the logging filters, so the request and its response become one log entry
+    private static final Filter LOG_EACH_CALL = (request, response, context) -> {
+        try {
+            return context.next(request, response);
+        } finally {
+            LOG.info("HTTP call:\n{}", drain().stripTrailing());
+        }
+    };
+
     private HttpLog() {
     }
 
     public static List<Filter> filters() {
         return switch (mode()) {
-            case "all" -> List.of(new RequestLoggingFilter(), new ResponseLoggingFilter());
+            case "all" -> List.of(LOG_EACH_CALL, new RequestLoggingFilter(BUFFERED), new ResponseLoggingFilter(BUFFERED));
             case "none" -> List.of();
             case "failures" -> List.of(new RequestLoggingFilter(BUFFERED), new ResponseLoggingFilter(BUFFERED));
             default -> throw new IllegalStateException("http.log must be failures, all or none but was: " + mode());

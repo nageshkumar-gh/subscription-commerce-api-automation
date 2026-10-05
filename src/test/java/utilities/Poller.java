@@ -1,5 +1,8 @@
 package utilities;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Predicate;
@@ -9,14 +12,18 @@ import java.util.function.Supplier;
 //Use this for anything asynchronous (Kafka events, workflow steps) instead of fixed sleeps
 public final class Poller {
 
+    private static final Logger LOG = LoggerFactory.getLogger(Poller.class);
     private static final Duration INTERVAL = Duration.ofSeconds(2);
 
     private Poller() {
     }
 
     public static <T> T waitUntil(String description, Supplier<T> action, Predicate<T> condition, Duration timeout) {
-        Instant deadline = Instant.now().plus(timeout);
+        Instant start = Instant.now();
+        Instant deadline = start.plus(timeout);
+        LOG.debug("Waiting up to {}s for {}", timeout.toSeconds(), description);
         T result = action.get();
+        int attempts = 1;
         while (!condition.test(result)) {
             if (Instant.now().isAfter(deadline)) {
                 throw new AssertionError("Timed out after " + timeout.toSeconds() + "s waiting for "
@@ -24,7 +31,9 @@ public final class Poller {
             }
             sleep();
             result = action.get();
+            attempts++;
         }
+        LOG.debug("Done waiting for {} after {} attempt(s), {} ms", description, attempts, Duration.between(start, Instant.now()).toMillis());
         return result;
     }
 
