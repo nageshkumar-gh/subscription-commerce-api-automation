@@ -1,3 +1,4 @@
 core.CleanupListener
 core.HttpLogListener
 core.TestLogListener
+core.ExtentReportListener

@@ -6,6 +6,7 @@ import io.restassured.filter.log.RequestLoggingFilter;
 import io.restassured.filter.log.ResponseLoggingFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.testng.ITestResult;
 
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
@@ -20,6 +21,7 @@ import java.util.List;
 public final class HttpLog {
 
     private static final Logger LOG = LoggerFactory.getLogger(HttpLog.class);
+    private static final String RESULT_ATTRIBUTE = "httpLog";
 
     //One buffer per thread, so parallel tests never mix their logs
     private static final ThreadLocal<ByteArrayOutputStream> BUFFER = ThreadLocal.withInitial(ByteArrayOutputStream::new);
@@ -65,11 +67,22 @@ public final class HttpLog {
         BUFFER.get().reset();
     }
 
-    //Called by HttpLogListener when a test fails: the traffic leading up to the failure
+    //The traffic since the last clear, emptying the buffer
     public static String drain() {
         String log = BUFFER.get().toString(StandardCharsets.UTF_8);
         clear();
         return log;
+    }
+
+    //HTTP traffic of a failed test or setup. Drained once and kept on the result, so every listener
+    //(console log, Extent report) gets the same text whatever order TestNG calls them in. Empty unless http.log=failures
+    public static String forFailedResult(ITestResult result) {
+        Object cached = result.getAttribute(RESULT_ATTRIBUTE);
+        if (cached == null) {
+            cached = isBuffered() ? drain().stripTrailing() : "";
+            result.setAttribute(RESULT_ATTRIBUTE, cached);
+        }
+        return (String) cached;
     }
 
     private static String mode() {

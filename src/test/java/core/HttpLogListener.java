@@ -24,13 +24,13 @@ public class HttpLogListener implements ITestListener, IConfigurationListener {
 
     @Override
     public void onTestFailure(ITestResult result) {
-        logHttpTraffic("test " + name(result));
+        logHttpTraffic("test", result);
     }
 
     //A failed @BeforeClass (e.g. could not create a customer) skips its tests, so show what it sent
     @Override
     public void onConfigurationFailure(ITestResult result) {
-        logHttpTraffic("setup " + name(result));
+        logHttpTraffic("setup", result);
     }
 
     @Override
@@ -38,12 +38,12 @@ public class HttpLogListener implements ITestListener, IConfigurationListener {
         HttpLog.clear();
     }
 
-    private static void logHttpTraffic(String what) {
+    private static void logHttpTraffic(String what, ITestResult result) {
         if (!HttpLog.isBuffered()) {
             return;
         }
-        String log = HttpLog.drain();
-        LOG.error("HTTP log for failed {}:\n{}", what, log.isBlank() ? "(no HTTP calls)" : log.stripTrailing());
+        String log = HttpLog.forFailedResult(result);
+        LOG.error("HTTP log for failed {} {}:\n{}", what, name(result), log.isBlank() ? "(no HTTP calls)" : log);
     }
 
     private static String name(ITestResult result) {
